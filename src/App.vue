@@ -1,28 +1,70 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png" />
-    <HelloWorld msg="Welcome to Your Vue.js App" />
+    <input name="" type="file" value="" @change="handleUpload" />
+
+    <div>
+      <span>上传进度：</span>
+      <span>{{ percentDescription }}</span>
+    </div>
+
+    <div>
+      <span>上传状态：</span>
+      <span>{{ stateDescription }}</span>
+    </div>
   </div>
 </template>
 
 <script>
-import HelloWorld from "./components/HelloWorld.vue";
+import axios from "axios";
 
 export default {
   name: "App",
-  components: {
-    HelloWorld,
+  data() {
+    return {
+      state: -1,
+      percent: "--",
+    };
+  },
+  computed: {
+    stateDescription() {
+      if (this.state === 0) return "上传中";
+      if (this.state === 1) return "解析中";
+
+      return "初始状态";
+    },
+    percentDescription() {
+      return typeof this.percent === "number"
+        ? `${this.percent.toFixed(2)}%`
+        : this.percent;
+    },
+  },
+  methods: {
+    handleUpload(e) {
+      const data = new FormData();
+      data.append("file", e.target.files[0]);
+
+      this.percent = "0";
+      this.state = 0;
+
+      axios
+        .post("/upload/files", data, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            console.log("processing", progressEvent, new Date());
+
+            this.percent = (progressEvent.loaded * 100.0) / progressEvent.total;
+            this.state = this.percent === 100 ? 1 : 0;
+          },
+        })
+        .then(() => {
+          this.percent = "--";
+          this.state = -1;
+
+          console.log("completed", new Date());
+        });
+    },
   },
 };
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>
